@@ -1,95 +1,88 @@
 package com.group2.handyman.controller;
 
-import com.group2.handyman.model.*;
+import com.group2.handyman.dto.request.UserCreateDto;
+import com.group2.handyman.dto.request.UserUpdateDto;
+import com.group2.handyman.model.User;
+import com.group2.handyman.service.UserService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-@CrossOrigin(origins = "http://localhost:8081")
+
 @RestController
 @RequestMapping("/users")
+@CrossOrigin(origins = "${handyman.cors.allowed-origins}")
 public class UserController {
 
     @Autowired
-    private UserRepository userRepository;
-    
-    @Autowired
     private UserService userService;
 
-    @Autowired
-    private WorkerRepository workerRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
-    // get all users
     @GetMapping
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<User>> getAllUsers() {
+        List<User> users = userService.getAllUsers();
+        return ResponseEntity.ok(users);
     }
 
-    // get all messages for a user
-    @GetMapping("/{userId}/messages")
-    public List<Message> getMessagesForUser(@PathVariable Long userId, @RequestParam Long workerId) {
-        return userService.getMessagesForUser(userId, workerId);
-    }
-    // get a single user by ID
     @GetMapping("/{id}")
+    @PreAuthorize("@securityService.isCurrentUser(#id) or hasRole('ADMIN')")
     public ResponseEntity<User> getUserById(@PathVariable Long id) {
-        return userRepository.findById(id)
-                .map(user -> new ResponseEntity<>(user, HttpStatus.OK))
-                .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
+        User user = userService.getUserById(id);
+        return ResponseEntity.ok(user);
     }
 
-    // create a new user, using /users
-    @PostMapping
-    public ResponseEntity<User> createUser(@RequestBody User user) {
-        User savedUser = userRepository.save(user);
-        return new ResponseEntity<>(savedUser, HttpStatus.CREATED);
-    }
-
-    // update an existing user, using /users/{id}
     @PutMapping("/{id}")
-    public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody User userDetails) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found with id " + id));
-
-        user.setUsername(userDetails.getUsername());
-        user.setPassword(userDetails.getPassword());
-        user.setEmail(userDetails.getEmail());
-        
-        final User updatedUser = userRepository.save(user);
+    @PreAuthorize("@securityService.isCurrentUser(#id)")
+    public ResponseEntity<User> updateUser(
+            @PathVariable Long id,
+            @Valid @RequestBody UserUpdateDto userDto) {
+        User updatedUser = userService.updateUser(id, userDto);
         return ResponseEntity.ok(updatedUser);
     }
 
-    // login a user
-    @PostMapping("/login")
-    public ResponseEntity<?> loginUser(@RequestBody Map<String, String> credentials) {
-        String identifier = credentials.get("email");
-        String password = credentials.get("password");
+    @DeleteMapping("/{id}")
+    @PreAuthorize("@securityService.isCurrentUser(#id) or hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
+        userService.deleteUser(id);
+        return ResponseEntity.noContent().build();
+    }
 
-        // find user by email or username
-        User user = userRepository.findByEmailOrUsername(identifier, identifier);
-        // find worker by email or username
-        Worker worker = workerRepository.findByEmailOrUsername(identifier, identifier);
+    @GetMapping("/search")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<User>> searchUsers(@RequestParam String keyword) {
+        List<User> users = userService.searchUsers(keyword);
+        return ResponseEntity.ok(users);
+    }
 
-        if (user != null && passwordEncoder.matches(password, user.getPassword())) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("record", user);
-            response.put("type", "user");
-            return new ResponseEntity<>(response, HttpStatus.OK);
-        } else if (worker != null && passwordEncoder.matches(password, worker.getPassword())) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("record", worker);
-            response.put("type", "worker");
-            return new ResponseEntity<>(response, HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>("Invalid credentials", HttpStatus.UNAUTHORIZED);
-        }
+    @PostMapping("/{id}/credit")
+    @PreAuthorize("@securityService.isCurrentUser(#id) or hasRole('ADMIN')")
+    public ResponseEntity<User> updateCredit(
+            @PathVariable Long id,
+            @RequestParam double amount) {
+        userService.updateCredit(id, amount);
+        return ResponseEntity.ok(userService.getUserById(id));
+    }
+
+    @GetMapping("/{id}/rating")
+    public ResponseEntity<Double> getUserRating(@PathVariable Long id) {
+        User user = userService.getUserById(id);
+        return ResponseEntity.ok(user.getAverageRating());
+    }
+
+    @GetMapping("/{id}/jobs/completed")
+    @PreAuthorize("@securityService.isCurrentUser(#id)")
+    public ResponseEntity<List<User>> getCompletedJobs(@PathVariable Long id) {
+        List<User> users = userService.searchUsers("completed");
+        return ResponseEntity.ok(users);
+    }
+
+    @GetMapping("/{id}/jobs/pending")
+    @PreAuthorize("@securityService.isCurrentUser(#id)")
+    public ResponseEntity<List<User>> getPendingJobs(@PathVariable Long id) {
+        List<User> users = userService.searchUsers("pending");
+        return ResponseEntity.ok(users);
     }
 }

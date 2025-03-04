@@ -1,200 +1,259 @@
 package com.group2.handyman.model;
 
+import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIdentityInfo;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.ObjectIdGenerators;
-import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
-
 @Entity
 @Table(name = "workers")
-//@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
-public class Worker{
+public class Worker {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(unique = true, nullable = false)
     private String username;
+
+    @Column(nullable = false)
     private String password;
+
+    @Column(unique = true, nullable = false)
     private String email;
-    private String description;
+
+    @Column(name = "full_name", nullable = false)
+    private String fullName;
+
+    @Column(nullable = false)
+    private String phone;
+
+    @Column(nullable = false)
     private String location;
-    private double averageRating;
-    private int totalRatings;
+
+    @Column(nullable = false, length = 1000)
+    private String description;
+
+    @Column(name = "working_hours")
     private String workingHours;
-	private double credit;
-	private String phone;
-	public enum PreferredCommunication {
-		EMAIL, PHONE
-	}
 
-	@Column(name = "preferred_communication")
-	@Enumerated(EnumType.STRING)
-	private PreferredCommunication preferredCommunication;
+    public enum PreferredCommunication {
+        EMAIL, PHONE
+    }
 
-	@ElementCollection
-	private List<String> previousTransactions = new ArrayList<>();
+    @Enumerated(EnumType.STRING)
+    @Column(name = "preferred_communication")
+    private PreferredCommunication preferredCommunication = PreferredCommunication.EMAIL;
 
-	@JsonIgnoreProperties("client")
-	@OneToMany(mappedBy = "worker", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-	@JsonBackReference
-	private Set<Job> jobs = new HashSet<>();
-    
-    @OneToMany(mappedBy = "worker", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private double credit;
+    private double averageRating;
+    private int totalJobs;
+    private List<String> previousTransactions = new ArrayList<>();
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "worker_skills",
+        joinColumns = @JoinColumn(name = "worker_id"),
+        inverseJoinColumns = @JoinColumn(name = "skill_id")
+    )
     private Set<Skill> skills = new HashSet<>();
 
-    // Update the average rating
-    public void addRating(double newRating) {
-        this.averageRating = ((this.averageRating * this.totalRatings) + newRating) / (this.totalRatings + 1);
-        this.totalRatings += 1;
+    @OneToMany(mappedBy = "worker", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Job> jobs = new ArrayList<>();
+
+    @OneToMany(mappedBy = "worker", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Message> messages = new ArrayList<>();
+
+    public Worker() {
     }
-    
-    public Worker() {}
 
+    public Worker(String username, String email, String password, String fullName, 
+                 String phone, String location, String description, String workingHours) {
+        this.username = username;
+        this.email = email;
+        this.password = password;
+        this.fullName = fullName;
+        this.phone = phone;
+        this.location = location;
+        this.description = description;
+        this.workingHours = workingHours;
+        this.credit = 0.0;
+        this.averageRating = 0.0;
+        this.totalJobs = 0;
+    }
 
-	public Worker(String username, String password, String email, String description, String location,
-				  double averageRating, int totalRatings, Set<Skill> skills, String workingHours,
-				  double credit, String phone, PreferredCommunication preferredCommunication) {
-		this.username = username;
-		this.password = password;
-		this.email = email;
-		this.description = description;
-		this.location = location;
-		this.averageRating = averageRating;
-		this.totalRatings = totalRatings;
-		this.skills = skills;
-		this.workingHours = workingHours;
-		this.credit = credit;
-		this.phone = phone;
-		this.preferredCommunication = preferredCommunication;
-	}
-	
-	
+    public Long getId() {
+        return id;
+    }
 
-	public Long getId() {
-		return id;
-	}
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-	public void setId(Long id) {
-		this.id = id;
-	}
+    public String getUsername() {
+        return username;
+    }
 
-	public String getUsername() {
-		return username;
-	}
+    public void setUsername(String username) {
+        this.username = username;
+    }
 
-	public void setUsername(String username) {
-		this.username = username;
-	}
+    public String getPassword() {
+        return password;
+    }
 
-	public String getPassword() {
-		return password;
-	}
+    public void setPassword(String password) {
+        this.password = password;
+    }
 
-	public void setPassword(String password) {
-		this.password = password;
-	}
+    public String getEmail() {
+        return email;
+    }
 
-	public String getEmail() {
-		return email;
-	}
+    public void setEmail(String email) {
+        this.email = email;
+    }
 
-	public void setEmail(String email) {
-		this.email = email;
-	}
+    public String getFullName() {
+        return fullName;
+    }
 
-	public String getDescription() {
-		return description;
-	}
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
 
-	public void setDescription(String description) {
-		this.description = description;
-	}
+    public String getPhone() {
+        return phone;
+    }
 
-	public String getLocation() {
-		return location;
-	}
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
 
-	public void setLocation(String location) {
-		this.location = location;
-	}
+    public String getLocation() {
+        return location;
+    }
 
-	public double getAverageRating() {
-		return averageRating;
-	}
+    public void setLocation(String location) {
+        this.location = location;
+    }
 
-	public void setAverageRating(double averageRating) {
-		this.averageRating = averageRating;
-	}
+    public String getDescription() {
+        return description;
+    }
 
-	public int getTotalRatings() {
-		return totalRatings;
-	}
+    public void setDescription(String description) {
+        this.description = description;
+    }
 
-	public void setTotalRatings(int totalRatings) {
-		this.totalRatings = totalRatings;
-	}
+    public String getWorkingHours() {
+        return workingHours;
+    }
 
-	public Set<Skill> getSkills() {
-		return skills;
-	}
+    public void setWorkingHours(String workingHours) {
+        this.workingHours = workingHours;
+    }
 
-	public void setSkills(Set<Skill> skills) {
-		this.skills = skills;
-	}
+    public double getCredit() {
+        return credit;
+    }
 
-	public String getWorkingHours() {
-		return workingHours;
-	}
+    public void setCredit(double credit) {
+        this.credit = credit;
+    }
 
-	public void setWorkingHours(String workingHours) {
-		this.workingHours = workingHours;
-	}
+    public double getAverageRating() {
+        return averageRating;
+    }
 
-	public double getCredit() {
-		return credit;
-	}
+    public void setAverageRating(double averageRating) {
+        this.averageRating = averageRating;
+    }
 
-	public void setCredit(double credit) {
-		this.credit = credit;
-	}
+    public int getTotalJobs() {
+        return totalJobs;
+    }
 
-	public Set<Job> getJobs() {
-		return jobs;
-	}
+    public void setTotalJobs(int totalJobs) {
+        this.totalJobs = totalJobs;
+    }
 
-	public void setJobs(Set<Job> jobs) {
-		this.jobs = jobs;
-	}
+    public PreferredCommunication getPreferredCommunication() {
+        return preferredCommunication;
+    }
 
-	public String getPhone() {
-		return phone;
-	}
+    public void setPreferredCommunication(PreferredCommunication preferredCommunication) {
+        this.preferredCommunication = preferredCommunication;
+    }
 
-	public void setPhone(String phone) {
-		this.phone = phone;
-	}
+    public List<String> getPreviousTransactions() {
+        return previousTransactions;
+    }
 
-	public PreferredCommunication getPreferredCommunication() {
-		return preferredCommunication;
-	}
+    public void setPreviousTransactions(List<String> previousTransactions) {
+        this.previousTransactions = previousTransactions;
+    }
 
-	public void setPreferredCommunication(PreferredCommunication preferredCommunication) {
-		this.preferredCommunication = preferredCommunication;
-	}
+    public void addRating(double rating) {
+        this.averageRating = ((this.averageRating * this.totalJobs) + rating) / (this.totalJobs + 1);
+        this.totalJobs++;
+    }
 
-	public List<String> getPreviousTransactions() {
-		return previousTransactions;
-	}
+    public void addTransaction(String transaction) {
+        this.previousTransactions.add(transaction);
+    }
 
-	public void setPreviousTransactions(List<String> previousTransactions) {
-		this.previousTransactions = previousTransactions;
-	}
+    public Set<Skill> getSkills() {
+        return skills;
+    }
+
+    public void setSkills(Set<Skill> skills) {
+        this.skills = skills;
+    }
+
+    public List<Job> getJobs() {
+        return jobs;
+    }
+
+    public void setJobs(List<Job> jobs) {
+        this.jobs = jobs;
+    }
+
+    public List<Message> getMessages() {
+        return messages;
+    }
+
+    public void setMessages(List<Message> messages) {
+        this.messages = messages;
+    }
+
+    public void addSkill(Skill skill) {
+        skills.add(skill);
+        skill.getWorkers().add(this);
+    }
+
+    public void removeSkill(Skill skill) {
+        skills.remove(skill);
+        skill.getWorkers().remove(this);
+    }
+
+    public void addJob(Job job) {
+        jobs.add(job);
+        job.setWorker(this);
+    }
+
+    public void removeJob(Job job) {
+        jobs.remove(job);
+        job.setWorker(null);
+    }
+
+    public void addMessage(Message message) {
+        messages.add(message);
+        message.setWorker(this);
+    }
+
+    public void removeMessage(Message message) {
+        messages.remove(message);
+        message.setWorker(null);
+    }
 }

@@ -1,19 +1,16 @@
 package com.group2.handyman;
 
-import java.time.LocalDateTime;
-import java.util.*;
-import java.util.stream.IntStream;
-import net.datafaker.Faker;
 import com.group2.handyman.model.*;
-import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.HashSet;
+import java.util.Set;
 
-@SpringBootApplication(exclude = {SecurityAutoConfiguration.class})
+@SpringBootApplication
 public class HandymanApplication {
 
     public static void main(String[] args) {
@@ -21,123 +18,102 @@ public class HandymanApplication {
     }
 
     @Bean
-    public ApplicationRunner init(UserRepository userRepository, WorkerRepository workerRepository,
-                                  JobRepository jobRepository, SkillRepository skillRepository,
-                                  PasswordEncoder passwordEncoder, MessageRepository messageRepository) {
-        return args -> {
-            Faker faker = new Faker();
-            Random random = new Random();
-            List<String> skillsList = Arrays.asList("Carpentry", "Plumbing", "Electrical", "Masonry", "Gardening");
-
-            // Message templates by skill
-            Map<String, String[]> messageTemplates = new HashMap<>();
-            messageTemplates.put("Carpentry", new String[]{
-                    "Can you help with a custom shelving unit?",
-                    "I'm available next week to discuss the project.",
-                    "What materials would we need for that?"
-            });
-            messageTemplates.put("Plumbing", new String[]{
-                    "My kitchen sink is leaking. Can you fix it?",
-                    "Do you have any availability this week?",
-                    "I'll need to inspect the sink first, but I can definitely help."
-            });
-            messageTemplates.put("Electrical", new String[]{
-                    "I need some outdoor lights installed.",
-                    "Can you do electrical installations?",
-                    "Yes, I can. Do you have the lights, or should I provide them?"
-            });
-            messageTemplates.put("Masonry", new String[]{
-                    "I'm looking to build a brick patio.",
-                    "That sounds like a great project. Do you have a design in mind?",
-                    "Not yet, I was hoping to get some ideas from you."
-            });
-            messageTemplates.put("Gardening", new String[]{
-                    "I want to redesign my garden, can you help?",
-                    "Of course, I love working on new garden designs.",
-                    "Great, I'm looking for something low maintenance."
-            });
-
-            // Skill descriptions
-            Map<String, String> skillDescriptions = Map.of(
-                    "Carpentry", "Specializes in wooden structures and furniture.",
-                    "Plumbing", "Expert in installing and repairing piping systems.",
-                    "Electrical", "Qualified to handle electrical systems and fixtures.",
-                    "Masonry", "Skilled in building structures using bricks and stones.",
-                    "Gardening", "Experienced in cultivating and managing gardens."
+    public CommandLineRunner demo(UserRepository userRepository,
+                                WorkerRepository workerRepository,
+                                JobRepository jobRepository,
+                                SkillRepository skillRepository,
+                                PasswordEncoder passwordEncoder) {
+        return (args) -> {
+            // Create sample users
+            // Create sample users
+            User user1 = new User(
+                "john_doe",
+                "john@example.com",
+                passwordEncoder.encode("password123"),
+                "John Doe",
+                "+1234567890",
+                "New York"
             );
+            userRepository.save(user1);
 
-            // Create 20 unique users
-            IntStream.rangeClosed(1, 20).forEach(i -> {
-                User user = new User(faker.name().username().toLowerCase(), passwordEncoder.encode("password"), faker.internet().emailAddress(), faker.number().randomDouble(2, 1000, 5000));
-                userRepository.save(user);
-            });
+            User user2 = new User(
+                "jane_smith",
+                "jane@example.com",
+                passwordEncoder.encode("password123"),
+                "Jane Smith",
+                "+1987654321",
+                "Los Angeles"
+            );
+            userRepository.save(user2);
 
-            // Create 20 unique workers, each with exactly one skill
-            IntStream.rangeClosed(1, 20).forEach(i -> {
-                String skillName = skillsList.get(i % skillsList.size());
-                String skillDescription = skillDescriptions.get(skillName);
+            // Create sample workers
+            Worker worker1 = new Worker(
+                "bob_builder",
+                "bob@example.com",
+                passwordEncoder.encode("password123"),
+                "Bob Builder",
+                "+1122334455",
+                "Chicago",
+                "Experienced handyman with 10 years of experience",
+                "09:00-17:00"
+            );
+            worker1.setPreferredCommunication(Worker.PreferredCommunication.PHONE);
 
-                Worker worker = new Worker(
-                        faker.name().fullName().replace(" ", ".").toLowerCase(),
-                        passwordEncoder.encode("password"),
-                        faker.internet().emailAddress(),
-                        skillDescription,
-                        faker.address().city(),
-                        Math.floor(1 + random.nextDouble() * 5),
-                        random.nextInt(100),
-                        new HashSet<>(),
-                        "09:00-17:00",
-                        1000 + random.nextDouble() * 9000,
-                        faker.phoneNumber().cellPhone(),
-                        Worker.PreferredCommunication.values()[random.nextInt(Worker.PreferredCommunication.values().length)]
-                );
+            Worker worker2 = new Worker(
+                "mike_mechanic",
+                "mike@example.com",
+                passwordEncoder.encode("password123"),
+                "Mike Mechanic",
+                "+1567890123",
+                "Houston",
+                "Specialized in plumbing and electrical work",
+                "08:00-16:00"
+            );
+            worker2.setPreferredCommunication(Worker.PreferredCommunication.EMAIL);
 
-                worker = workerRepository.save(worker);
+            // Create and save skills
+            Skill plumbing = skillRepository.save(new Skill("Plumbing"));
+            Skill electrical = skillRepository.save(new Skill("Electrical"));
+            Skill carpentry = skillRepository.save(new Skill("Carpentry"));
+            Skill painting = skillRepository.save(new Skill("Painting"));
 
-                Skill workerSkill = new Skill(skillName, worker, null);
-                workerSkill = skillRepository.save(workerSkill);
+            // Add skills to workers
+            worker1.addSkill(carpentry);
+            worker1.addSkill(painting);
+            workerRepository.save(worker1);
 
-                worker.getSkills().add(workerSkill);
-                workerRepository.save(worker);
-            });
+            worker2.addSkill(plumbing);
+            worker2.addSkill(electrical);
+            workerRepository.save(worker2);
 
-            List<User> users = userRepository.findAll();
-            List<Worker> workers = workerRepository.findAll();
+            // Create sample jobs
+            Job job1 = new Job();
+            job1.setClient(user1);
+            job1.setWorker(worker1);
+            job1.setTitle("Kitchen Renovation");
+            job1.setDescription("Complete kitchen renovation including cabinets and countertops");
+            job1.setBudget(5000.0);
+            job1.setCompleted(true);
+            job1.setRating(4.5);
+            job1.getSkills().add(carpentry);
+            job1.getSkills().add(painting);
+            jobRepository.save(job1);
 
-            // Create jobs with linked skills
-            for (int i = 0; i < 50; i++) {
-                User user = users.get(random.nextInt(users.size()));
-                Worker worker = workers.get(random.nextInt(workers.size()));
-                boolean isCompleted = random.nextBoolean();
-                String skill = skillsList.get(random.nextInt(skillsList.size()));
-                String jobTitle = skill;
-                String jobDescription = "A " + skill.toLowerCase() + " job requiring attention to detail.";
+            Job job2 = new Job();
+            job2.setClient(user2);
+            job2.setWorker(worker2);
+            job2.setTitle("Bathroom Plumbing");
+            job2.setDescription("Fix leaking pipes and install new shower");
+            job2.setBudget(2000.0);
+            job2.setCompleted(false);
+            job2.getSkills().add(plumbing);
+            jobRepository.save(job2);
 
-                Job job = new Job(user, isCompleted ? worker : null, isCompleted, isCompleted ? Math.floor(random.nextDouble() * 5 + 1) : null,
-                        jobTitle, jobDescription, Math.round((100.0 + random.nextDouble() * 400.0) * 100.0) / 100.0,
-                        new HashSet<>());
-                job = jobRepository.save(job);
-
-                Skill jobSkill = new Skill(skill, worker, job);
-                skillRepository.save(jobSkill);
-            }
-
-            // Create meaningful messages between users and workers
-            workers.forEach(worker -> {
-                users.forEach(user -> {
-                    if (random.nextBoolean()) {
-                        LocalDateTime timestamp = LocalDateTime.now().minusDays(random.nextInt(30) + 1);
-                        String skill = skillsList.get(random.nextInt(skillsList.size()));
-                        String[] messages = messageTemplates.get(skill);
-
-                        for (String messageText : messages) {
-                            Message message = new Message(user, worker, messageText, timestamp);
-                            messageRepository.save(message);
-                            timestamp = timestamp.plusMinutes(15 + random.nextInt(45)); // Increment time for next message
-                        }
-                    }
-                });
-            });
+            // Update worker ratings
+            worker1.addRating(4.5);
+            worker2.addRating(4.8);
+            workerRepository.save(worker1);
+            workerRepository.save(worker2);
         };
     }
 }

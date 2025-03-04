@@ -1,103 +1,85 @@
 package com.group2.handyman.controller;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-
-import com.group2.handyman.model.*;
+import com.group2.handyman.dto.request.MessageCreateDto;
+import com.group2.handyman.dto.response.MessageResponseDto;
+import com.group2.handyman.service.MessageService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
-@CrossOrigin(origins = "http://localhost:8081")
+import java.util.List;
+
 @RestController
 @RequestMapping("/messages")
+@CrossOrigin(origins = "${handyman.cors.allowed-origins}")
 public class MessageController {
 
     @Autowired
-    private MessageRepository messageRepository;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private WorkerRepository workerRepository;
+    private MessageService messageService;
 
     @PostMapping("/send")
-    public ResponseEntity<Message> sendMessage(@RequestBody MessageDTO messageDTO) {
-        User user = userRepository.findById(messageDTO.getUserId()).orElseThrow(() -> new RuntimeException("User not found"));
-        Worker worker = workerRepository.findById(messageDTO.getWorkerId()).orElseThrow(() -> new RuntimeException("Worker not found"));
+    @PreAuthorize("@securityService.canAccessMessage(#messageDto.userId, #messageDto.workerId)")
+    public ResponseEntity<MessageResponseDto> sendMessage(@Valid @RequestBody MessageCreateDto messageDto) {
+        MessageResponseDto response = messageService.sendMessage(messageDto);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
 
-        Message message = new Message();
-        message.setUser(user);
-        message.setWorker(worker);
-        message.setContent(messageDTO.getContent());
-        message.setTimestamp(LocalDateTime.now());
-
-        Message savedMessage = messageRepository.save(message);
-        return new ResponseEntity<>(savedMessage, HttpStatus.CREATED);
+    @GetMapping("/conversation")
+    @PreAuthorize("@securityService.canAccessMessage(#userId, #workerId)")
+    public ResponseEntity<List<MessageResponseDto>> getConversation(
+            @RequestParam Long userId,
+            @RequestParam Long workerId) {
+        List<MessageResponseDto> messages = messageService.getMessagesBetweenUserAndWorker(userId, workerId);
+        return ResponseEntity.ok(messages);
     }
 
     @GetMapping("/user/{userId}")
-    public List<Message> getMessagesForUser(@PathVariable Long userId, @RequestParam Long workerId) {
-        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
-        Worker worker = workerRepository.findById(workerId).orElseThrow(() -> new RuntimeException("Worker not found"));
-        
-        // get messages where user is the sender and worker is the receiver
-        List<Message> messagesFromUserToWorker = messageRepository.findByUserAndWorker(user, worker);
-
-        List<Message> allMessages = new ArrayList<>();
-        allMessages.addAll(messagesFromUserToWorker);
-        
-        return allMessages;
+    @PreAuthorize("@securityService.isCurrentUser(#userId)")
+    public ResponseEntity<List<MessageResponseDto>> getUserMessages(@PathVariable Long userId) {
+        List<MessageResponseDto> messages = messageService.getAllUserMessages(userId);
+        if (messages.isEmpty()) {
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        }
+        return ResponseEntity.ok(messages);
     }
-
 
     @GetMapping("/worker/{workerId}")
-    public List<Message> getMessagesForWorker(@PathVariable Long workerId, @RequestParam Long userId) {
-        Worker worker = workerRepository.findById(workerId).orElseThrow(() -> new RuntimeException("Worker not found"));
-        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
-
-        // get messages where worker is the sender and user is the receiver
-        List<Message> messagesFromWorkerToUser = messageRepository.findByWorkerAndUser(worker, user);
-
-        List<Message> allMessages = new ArrayList<>();
-        allMessages.addAll(messagesFromWorkerToUser);
-
-        return allMessages;
-    }
-
-
-    @GetMapping("/user/{userId}/all")
-    public ResponseEntity<List<Message>> getAllMessagesByUser(@PathVariable Long userId) {
-        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
-
-        List<Message> messages = messageRepository.findByUser(user);
-
+    @PreAuthorize("@securityService.isCurrentWorker(#workerId)")
+    public ResponseEntity<List<MessageResponseDto>> getWorkerMessages(@PathVariable Long workerId) {
+        List<MessageResponseDto> messages = messageService.getAllWorkerMessages(workerId);
         if (messages.isEmpty()) {
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }
-        return new ResponseEntity<>(messages, HttpStatus.OK);
+        return ResponseEntity.ok(messages);
     }
 
-    @GetMapping("/worker/{workerId}/all")
-    public ResponseEntity<List<Message>> getAllMessagesByWorker(@PathVariable Long workerId) {
-        Worker worker = workerRepository.findById(workerId).orElseThrow(() -> new RuntimeException("Worker not found"));
-
-        List<Message> messages = messageRepository.findByWorker(worker);
-
-        if (messages.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-        }
-        return new ResponseEntity<>(messages, HttpStatus.OK);
+    @GetMapping("/recent")
+    @PreAuthorize("@securityService.canAccessMessage(#userId, #workerId)")
+    public ResponseEntity<List<MessageResponseDto>> getRecentMessages(
+            @RequestParam Long userId,
+            @RequestParam Long workerId,
+            @RequestParam(defaultValue = "20") int limit) {
+        List<MessageResponseDto> messages = messageService.getRecentMessages(userId, workerId, limit);
+        return ResponseEntity.ok(messages);
     }
 
+    @GetMapping("/search")
+    @PreAuthorize("@securityService.canAccessMessage(#userId, #workerId)")
+    public ResponseEntity<List<MessageResponseDto>> searchMessages(
+            @RequestParam Long userId,
+            @RequestParam Long workerId,
+            @RequestParam String keyword) {
+        List<MessageResponseDto> messages = messageService.searchMessages(userId, workerId, keyword);
+        return ResponseEntity.ok(messages);
+    }
+
+    @DeleteMapping("/{messageId}")
+    @PreAuthorize("@securityService.canDeleteMessage(#messageId)")
+    public ResponseEntity<Void> deleteMessage(@PathVariable Long messageId) {
+        messageService.deleteMessage(messageId);
+        return ResponseEntity.noContent().build();
+    }
 }

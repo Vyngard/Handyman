@@ -9,11 +9,17 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface WorkerRepository extends JpaRepository<Worker, Long> {
-	 @Query("SELECT w FROM Worker w JOIN w.skills s WHERE s.name = :skill")
-	 List<Worker> findBySkillsName(@Param("skill") String skill);
-	 
-	 @Query("SELECT w FROM Worker w WHERE w.totalRatings = :rating")
-	 List<Worker> findByRating(@Param("rating") int rating);
+    @Query("SELECT w FROM Worker w JOIN w.skills s WHERE s.name = :skill")
+    List<Worker> findBySkillsName(@Param("skill") String skill);
+    
+    @Query("SELECT w FROM Worker w WHERE w.averageRating >= :rating")
+    List<Worker> findByRating(@Param("rating") double rating);
 
-	Worker findByEmailOrUsername(String email, String username);
+    @Query("SELECT w FROM Worker w WHERE w.location LIKE %:location%")
+    List<Worker> findByLocationContaining(@Param("location") String location);
+
+    @Query("SELECT w FROM Worker w WHERE LOWER(w.username) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(w.email) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(w.description) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+    List<Worker> findByKeyword(@Param("keyword") String keyword);
+
+    Worker findByEmailOrUsername(String email, String username);
 }
