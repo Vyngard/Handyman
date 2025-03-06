@@ -1,4 +1,4 @@
-package com.group2.handyman.model;
+package com.group2.handyman.dto.request;
 
 public class MessageDTO {
     private Long userId;
