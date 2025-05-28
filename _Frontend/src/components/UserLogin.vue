@@ -33,7 +33,6 @@
   
 <script>
 import LoginService from "../services/LoginService";
-import router from "../router/index.js";
   
 export default {
 
@@ -53,42 +52,53 @@ export default {
     login() {
       LoginService.login(this.userLogin)
         .then((response) => {
-          console.log(response);
-          let userId = response.data.record.id
-          console.log("workerid: " , userId)
-          //let user = response.data;
-          let userType = response.data.type;
-          localStorage.setItem('token', response.data.token);
-
-          //for storing if it is user or worker
-          localStorage.setItem('userType', userType);   
+          console.log('Login response:', response);
           
-          // //for storing the fullname
-          // let parts = response.data.record.username.split("_");
-          // if (parts[1] != null || parts[1]!="")
-          // localStorage.setItem('fullName', parts[1]); 
-          let fullname = response.data.record.username;
-          localStorage.setItem('fullName', fullname); 
+          // Extract data from the correct response structure
+          let userId = response.data.id;
+          let role = response.data.role;
+          let username = response.data.username;
+          let token = response.data.token;
+          
+          console.log("userId:", userId, "role:", role, "username:", username);
+          
+          // Map backend role to frontend userType
+          let userType;
+          if (role === "ROLE_USER") {
+            userType = "user";
+          } else if (role === "ROLE_WORKER") {
+            userType = "worker";
+          } else {
+            console.error("Unknown role:", role);
+            this.errorMessage = "Unknown user role. Please contact support.";
+            return;
+          }
+          
+          // Store authentication data
+          localStorage.setItem('token', token);
+          localStorage.setItem('userType', userType);
+          localStorage.setItem('fullName', username);
+          localStorage.setItem('newLogin', 'true');
+          
+          console.log("Login successful, userType:", userType);
 
-          //for updating navbar
-          localStorage.setItem('newLogin', true);   
-          let newLogin =localStorage.getItem('newLogin');   
-          console.log("is it newlogin:" + newLogin);
-
-  
-        
-          if (userType === "user") { 
-            localStorage.setItem('userId', userId); 
-            console.log(userId);
-            this.isLoggedIn = true; 
-            router.push("/userdetails");                 
+          if (userType === "user") {
+            localStorage.setItem('userId', userId);
+            console.log("Redirecting to user details");
+            this.isLoggedIn = true;
+            this.$router.replace("/userdetails");
           }
           else if (userType === "worker") {
-            localStorage.setItem('workerId',userId); 
-            console.log(userId);
-            this.isLoggedIn = true; 
-            router.push("/workerdetails");              
-            }
+            localStorage.setItem('workerId', userId);
+            console.log("Redirecting to worker details");
+            this.isLoggedIn = true;
+            this.$router.replace("/workerdetails");
+          }
+          
+          // Force a page reload to update navbar and other components
+          setTimeout(() => {
+            window.location.reload();
+          }, 100);
          
         })
         .catch((error) => {

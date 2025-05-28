@@ -167,43 +167,77 @@ export default{
         },
 
         fetchJobs() {
-            this.worker.skills.forEach(skill => {
+            if (!this.worker.skills || this.worker.skills.length === 0) {
+                console.log('No skills found for worker');
+                return;
+            }
 
-            const todayDate= new Date()
-
-            this.random_number = Math.floor(Math.random() * 3) + 1; 
-            console.log(this.random_number)
-
+            // Get jobs for the first skill (or you could combine all skills)
+            const firstSkill = this.worker.skills[0];
+            const todayDate = new Date();
+            this.random_number = Math.floor(Math.random() * 3) + 1;
             todayDate.setDate(todayDate.getDate() - this.random_number);
-            console.log(todayDate)
-
             const newDate = todayDate.toLocaleDateString();
-            FetchDataServices.getjobBySkill(skill.name)
+
+            console.log('Fetching jobs for skill:', firstSkill.name);
+            
+            FetchDataServices.getjobBySkill(firstSkill.name)
                 .then(response => {
+                    console.log('Jobs response:', response.data);
                     this.jobs = response.data.filter(job => job.worker === null);
-                    this.date= newDate;
-                    this.displayOldJobs=false
-                    this.displayNewJobs=true
-                 
+                    this.date = newDate;
+                    this.displayOldJobs = false;
+                    this.displayNewJobs = true;
+                    console.log('Filtered available jobs:', this.jobs);
                 })
                 .catch(error => {
-                    console.error(error);
+                    console.error('Error fetching jobs by skill:', error);
+                    // Fallback: fetch all jobs and filter client-side
+                    FetchDataServices.getAllJobs()
+                        .then(response => {
+                            this.jobs = response.data.filter(job =>
+                                job.worker === null &&
+                                job.skills &&
+                                job.skills.some(jobSkill =>
+                                    this.worker.skills.some(workerSkill =>
+                                        workerSkill.name === jobSkill.name
+                                    )
+                                )
+                            );
+                            this.date = newDate;
+                            this.displayOldJobs = false;
+                            this.displayNewJobs = true;
+                        })
+                        .catch(fallbackError => {
+                            console.error('Error fetching all jobs:', fallbackError);
+                        });
                 });
-            });
         },
         fetchRecentJobs(){
             const id = localStorage.getItem('workerId')
+            console.log('Fetching recent jobs for worker:', id);
+            
             FetchDataServices.getjobByWorkerId(id)
             .then(response=>{
-                this.jobs = response.data
-                this.displayNewJobs=false
-                this.displayOldJobs =true   
-               
+                console.log('Worker jobs response:', response.data);
+                this.jobs = response.data;
+                this.displayNewJobs = false;
+                this.displayOldJobs = true;
             })
             .catch(error => {
-                    console.error(error);
+                console.error('Error fetching worker jobs:', error);
+                // Fallback: try the alternative endpoint
+                FetchDataServices.getWorkerJobs(id)
+                .then(response => {
+                    console.log('Alternative worker jobs response:', response.data);
+                    this.jobs = Array.from(response.data) || [];
+                    this.displayNewJobs = false;
+                    this.displayOldJobs = true;
                 })
-
+                .catch(fallbackError => {
+                    console.error('Error with fallback endpoint:', fallbackError);
+                });
+            });
         },
         checklogin() {
         localStorage.setItem('newLogin', false);

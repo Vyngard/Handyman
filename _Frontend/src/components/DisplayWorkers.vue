@@ -1,11 +1,12 @@
 <template>   
   <div class="container-worker">
     <div class="categories">
-        <span> Carpentry</span>
-        <span>Plumbing </span>
-        <span>Electrical </span>
-        <span>Masonry</span>
-        <span>Gardening </span>
+        <span @click="filterBySkill('all')" :class="{ active: selectedSkill === 'all' }">All Workers</span>
+        <span @click="filterBySkill('Carpentry')" :class="{ active: selectedSkill === 'Carpentry' }">Carpentry</span>
+        <span @click="filterBySkill('Plumbing')" :class="{ active: selectedSkill === 'Plumbing' }">Plumbing</span>
+        <span @click="filterBySkill('Electrical')" :class="{ active: selectedSkill === 'Electrical' }">Electrical</span>
+        <span @click="filterBySkill('Masonry')" :class="{ active: selectedSkill === 'Masonry' }">Masonry</span>
+        <span @click="filterBySkill('Gardening')" :class="{ active: selectedSkill === 'Gardening' }">Gardening</span>
     </div>
 
   <div>
@@ -96,6 +97,8 @@ export default{
     data() {
     return {
       workers: [],
+      allWorkers: [],
+      selectedSkill: 'all',
       id:1
       
     }
@@ -106,15 +109,40 @@ export default{
         fetchWorkers(){
             FetchDataService.getAllWorkers()
             .then(response =>{
-                this.workers =response.data
-                console.log(response)               
+                this.allWorkers = response.data;
+                this.workers = response.data;
+                console.log('All workers loaded:', response.data);
             })
             .catch (error =>{
                 if (error.response) {
-            console.log(error.response.data);
-            console.log(error.response.status);
-        }} );
-      },
+                    console.log(error.response.data);
+                    console.log(error.response.status);
+                }
+                console.error('Error fetching workers:', error);
+            });
+        },
+
+        filterBySkill(skill) {
+            this.selectedSkill = skill;
+            if (skill === 'all') {
+                this.workers = this.allWorkers;
+            } else {
+                FetchDataService.getWorkersBySkill(skill)
+                .then(response => {
+                    this.workers = response.data;
+                    console.log(`Workers with ${skill} skill:`, response.data);
+                })
+                .catch(error => {
+                    console.error(`Error fetching workers with ${skill} skill:`, error);
+                    // Fallback to client-side filtering if backend endpoint fails
+                    this.workers = this.allWorkers.filter(worker =>
+                        worker.skills && worker.skills.some(workerSkill =>
+                            workerSkill.name === skill
+                        )
+                    );
+                });
+            }
+        },
 
       sendData(workerId){
        
@@ -150,7 +178,22 @@ h1{
 }
 
 .categories span {
-  margin-right: 15px; 
+  margin-right: 15px;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.categories span:hover {
+  background-color: #f0f0f0;
+  color: #e27713;
+}
+
+.categories span.active {
+  background-color: #e27713;
+  color: white;
+  font-weight: bold;
 }
 
 .cards{

@@ -46,10 +46,11 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/auth/**", "/h2-console/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                .requestMatchers("/jobs", "/workers", "/jobs/**", "/workers/**").permitAll() // Allow public access to view jobs and workers
                 .requestMatchers("/users/**").hasRole("USER")
-                .requestMatchers("/workers/**").hasRole("WORKER")
                 .requestMatchers("/jobs/create").hasRole("USER")
                 .requestMatchers("/jobs/{id}/complete").hasRole("WORKER")
+                .requestMatchers("/messages/**").authenticated()
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session
@@ -83,7 +84,15 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("${handyman.cors.allowed-origins}")); // From application.properties
+        // Allow common frontend development ports
+        configuration.setAllowedOrigins(Arrays.asList(
+            "http://localhost:3000",
+            "http://localhost:8080",
+            "http://localhost:8081",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:8080",
+            "http://127.0.0.1:8081"
+        ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList(
             "Authorization",

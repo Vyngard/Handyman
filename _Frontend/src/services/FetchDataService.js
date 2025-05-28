@@ -7,11 +7,11 @@ class FetchDataService {
     }
 
     createWorker(workerData) {
-        return http.post("/workers", workerData);
+        return http.post("/auth/register/worker", workerData);
     }
 
     createUser(userData) {
-        return http.post("/users", userData); 
+        return http.post("/auth/register/user", userData);
     }
     getWorkerById(sid){
         return http.get(`/workers/${sid}`)
@@ -30,7 +30,7 @@ class FetchDataService {
     }
 
     getjobBySkill(skill){
-        return http.get(`/jobs/skills/${skill}`)
+        return http.get(`/jobs/skills`, { params: { skills: [skill] } })
     }
 
     getjobByWorkerId(workerId){
@@ -50,7 +50,7 @@ class FetchDataService {
     }
 
     postNewJob(clientId, data){
-        return http.post(`/jobs/create?clientId=${clientId}`, data)
+        return http.post(`/jobs`, data)
     }
 
     updateJobs(sid, data){

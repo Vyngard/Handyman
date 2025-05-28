@@ -29,7 +29,7 @@
             <router-link to="/login" class="nav-link">Login</router-link>
           </li>
           <li v-if="!isLoggedIn">
-            <router-link to="/singup" class="nav-link">Sign up</router-link>
+            <router-link to="/signup" class="nav-link">Sign up</router-link>
           </li>
           <li v-if="isLoggedIn">
             <router-link to="/" class="nav-link"><a href="#" @click="logout">Logout</a></router-link>
@@ -53,23 +53,48 @@ export default {
   
   methods: {
     logout() {
-      localStorage.removeItem('token');   
-      localStorage.removeItem('userId');      
-      localStorage.removeItem('workerId');      
-      this.isLoggedIn = false;      
+      localStorage.removeItem('token');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('workerId');
+      localStorage.removeItem('userType');
+      localStorage.removeItem('fullName');
+      this.isLoggedIn = false;
+      this.userType = null;
       this.$router.push('/');
     },
-    chekUserType(){
+    
+    checkUserType(){
       this.userType = localStorage.getItem('userType');
-      console.log("user type" + this.userType)
+      console.log("user type: " + this.userType)
+    },
+    
+    updateLoginStatus() {
+      const token = localStorage.getItem('token');
+      this.isLoggedIn = !!token;
+      if (this.isLoggedIn) {
+        this.checkUserType();
+      } else {
+        this.userType = null;
+      }
     }
   },
 
   mounted() {
-    // Check if token exists in local storage
-    if (localStorage.getItem('token')) {
-      this.isLoggedIn = true;
-      this.chekUserType();    
+    this.updateLoginStatus();
+    
+    // Listen for storage changes (when login happens in another tab)
+    window.addEventListener('storage', this.updateLoginStatus);
+    
+    // Check for login status changes periodically
+    this.loginCheckInterval = setInterval(() => {
+      this.updateLoginStatus();
+    }, 1000);
+  },
+  
+  beforeUnmount() {
+    window.removeEventListener('storage', this.updateLoginStatus);
+    if (this.loginCheckInterval) {
+      clearInterval(this.loginCheckInterval);
     }
   },
 

@@ -78,7 +78,13 @@
       </div>
     </form>
 
-
+    <!-- Display success/error messages -->
+    <div v-if="successMessage" class="success-message">
+      {{ successMessage }}
+    </div>
+    <div v-if="errorMessage" class="error-message">
+      {{ errorMessage }}
+    </div>
 
   </div>
 
@@ -87,7 +93,6 @@
 
 <script>
 import FetchDataService from "../services/FetchDataService";
-import bcrypt from 'bcryptjs';
 
 
 // Define the capitalizeFirstLetter function outside of the component
@@ -131,56 +136,66 @@ methods: {
     this.tempSkill = "";
   },
 
-  async submitWorkerForm() {
+  submitWorkerForm() {
     // Combine firstName and lastName to create the username
-    // this.worker.username = "worker_" + capitalizeFirstLetter(this.worker.firstname) + capitalizeFirstLetter(this.worker.lastname);
     this.worker.username = capitalizeFirstLetter(this.worker.firstname) + "." + capitalizeFirstLetter(this.worker.lastname);
 
     this.addSkill();
-    // Hash the password using bcrypt
-    const hashedPassword = await bcrypt.hash(this.worker.password, 10);
+    
+    // Prepare worker data for backend
+    const workerData = {
+      ...this.worker,
+      skillNames: this.worker.skills
+    };
 
-    // Set the hashed password to the worker object
-    this.worker.password = hashedPassword;
+    console.log("Creating worker:", workerData);
 
-    FetchDataService.createWorker({...this.worker,
-      skillNames: this.worker.skills})
+    FetchDataService.createWorker(workerData)
       .then(response => {
         console.log("Worker created successfully:", response.data);
-        this.successMessage = "Worker created successfully!";
+        this.successMessage = "Worker created successfully! You can now login.";
         this.errorMessage = null;
-        // Redirect to the home page after a successful form submission
-        this.$router.push('/login');
+        
+        // Show success message briefly then redirect
+        setTimeout(() => {
+          this.$router.replace('/login');
+        }, 2000);
       })
       .catch(error => {
         console.error("Error creating worker:", error);
-        this.errorMessage = "Error creating worker. Please try again.";
+        if (error.response && error.response.data) {
+          this.errorMessage = error.response.data.message || "Error creating worker. Please try again.";
+        } else {
+          this.errorMessage = "Error creating worker. Please try again.";
+        }
         this.successMessage = null;
       });
   },
-  async submitUserForm() {
+  
+  submitUserForm() {
     // Combine firstName and lastName to create the username
-    // this.user.username = "user_" + capitalizeFirstLetter(this.user.firstname) + capitalizeFirstLetter(this.user.lastname);
     this.user.username = capitalizeFirstLetter(this.user.firstname) + "." + capitalizeFirstLetter(this.user.lastname);
 
-
-    // Hash the password using bcrypt
-    const hashedPassword = await bcrypt.hash(this.user.password, 10);
-
-    // Set the hashed password to the user object
-    this.user.password = hashedPassword;
+    console.log("Creating user:", this.user);
 
     FetchDataService.createUser(this.user)
       .then(response => {
         console.log("User created successfully:", response.data);
-        this.successMessage = "User created successfully!";
+        this.successMessage = "User created successfully! You can now login.";
         this.errorMessage = null;
-        // Redirect to the home page after a successful form submission
-        this.$router.push('/login');
+        
+        // Show success message briefly then redirect
+        setTimeout(() => {
+          this.$router.replace('/login');
+        }, 2000);
       })
       .catch(error => {
         console.error("Error creating user:", error);
-        this.errorMessage = "Error creating user. Please try again.";
+        if (error.response && error.response.data) {
+          this.errorMessage = error.response.data.message || "Error creating user. Please try again.";
+        } else {
+          this.errorMessage = "Error creating user. Please try again.";
+        }
         this.successMessage = null;
       });
   }
@@ -314,5 +329,27 @@ textarea{
 .type-user2{
   margin-bottom: 0px;
   margin-top: 10px;
+}
+
+.success-message {
+  color: green;
+  font-weight: bold;
+  text-align: center;
+  margin: 20px;
+  padding: 10px;
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  border-radius: 4px;
+}
+
+.error-message {
+  color: red;
+  font-weight: bold;
+  text-align: center;
+  margin: 20px;
+  padding: 10px;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
 }
 </style>

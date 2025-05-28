@@ -60,7 +60,7 @@
 
       </div>
       
-      <div v-if="completedJobs.length">
+      <div v-if="completedJobs && completedJobs.length > 0">
         <div v-for="(job, index) in completedJobs" :key="index" class="job">
           <p class="desc-job" style="font-weight: bold;">{{ job.title }}</p>
           <p class="desc-job"><strong>Description:</strong> {{ job.description }}</p>
@@ -84,8 +84,14 @@
           </p>
         </div>
       </div>
+      
+      <div v-if="!completedJobs || completedJobs.length === 0">
+        <div class="no-jobs-message">
+          <p>No completed jobs yet.</p>
+        </div>
+      </div>
   
-      <div v-if="uncompletedJobs.length">
+      <div v-if="uncompletedJobs && uncompletedJobs.length > 0">
         <div v-for="(job, index) in uncompletedJobs" :key="index" class="job">
           <p class="desc-job" style="font-weight: bold;">{{ job.title }}</p>
           <p class="desc-job"><strong>Description:</strong> {{ job.description }}</p>
@@ -111,6 +117,12 @@
             <button @click="markCompleted(job.id)" v-if="job.worker != null" class="button-profile">Mark as Completed</button>
           </p>
         </div>
+      </div>
+    </div>
+    
+    <div v-if="!uncompletedJobs || uncompletedJobs.length === 0">
+      <div class="no-jobs-message">
+        <p>No pending jobs. Create a new job above to get started!</p>
       </div>
     </div>
   </div>
@@ -161,45 +173,73 @@
     },
 
     methods: {
-        retrieveUser() {       
+        retrieveUser() {
           let id = localStorage.getItem('userId')
           let fullName ;
           this.fullName = localStorage.getItem('fullName')
-          console.log(fullName);
+          console.log('Full name:', fullName);
         
-          console.log("SID:" + id)
+          console.log("User ID:", id)
+          
+          if (!id) {
+            console.error('No user ID found in localStorage');
+            return;
+          }
+          
           FetchDataServices.getUserById(id)
             .then(response => {
-              this.user = response.data
-              this.fetchJobs(id)
+              console.log('User data:', response.data);
+              this.user = response.data;
+              this.fetchJobs(id);
             })
             .catch(error => {
-              console.log(error)
+              console.error('Error fetching user:', error);
+              if (error.response) {
+                console.log('Error response:', error.response.data);
+                console.log('Error status:', error.response.status);
+              }
             })
         },
-        fetchJobs(id) {      
+        fetchJobs(id) {
+          console.log('Fetching jobs for user:', id);
           FetchDataServices.getJobByUserId(id)
             .then(response => {
-              this.jobs = response.data;
-              this.markAsUnCompleted()
+              console.log('Jobs response:', response.data);
+              // Ensure jobs is always an array
+              this.jobs = Array.isArray(response.data) ? response.data : [];
+              this.markAsUnCompleted();
             })
             .catch(error => {
+              console.error('Error fetching jobs:', error);
+              // Initialize as empty array on error
+              this.jobs = [];
+              this.completedJobs = [];
+              this.uncompletedJobs = [];
+              
               if (error.response) {
-                console.log(error.response.data);
-                console.log(error.response.status);
+                console.log('Error response:', error.response.data);
+                console.log('Error status:', error.response.status);
               }
             });
         },
         markAsCompleted() {
+          // Ensure jobs is an array before filtering
+          if (!Array.isArray(this.jobs)) {
+            console.warn('Jobs is not an array:', this.jobs);
+            this.jobs = [];
+          }
           this.completedJobs = this.jobs.filter(job => job.isCompleted);
-          this.uncompletedJobs = []          
+          this.uncompletedJobs = [];
         },
         markAsUnCompleted() {
+          // Ensure jobs is an array before filtering
+          if (!Array.isArray(this.jobs)) {
+            console.warn('Jobs is not an array:', this.jobs);
+            this.jobs = [];
+          }
           this.uncompletedJobs = this.jobs.filter(job => !job.isCompleted);
-          
-          console.log(this.uncompletedJobs)
-          this.completedJobs = []
-          
+          this.completedJobs = [];
+          console.log('Uncompleted jobs:', this.uncompletedJobs);
         },
         markCompleted(jobId) {
           FetchDataServices.completeJob(jobId)
@@ -237,24 +277,31 @@
           let newJobPost = {
               title: this.newJob.title,
               description: this.newJob.description,
-              budget: this.newJob.budget
+              budget: parseFloat(this.newJob.budget)
           };
       
+          console.log('Creating new job:', newJobPost);
+          
           FetchDataServices.postNewJob(id, newJobPost)
           .then(response=>{
-            console.log(response)
+            console.log('Job created successfully:', response);
             this.fetchJobs(id);
-            this.newJob.title="",
-            this.newJob.description="",
-            this.newJob.budget=""
-           
-          this.errorMessage = "";
-            
+            // Clear form
+            this.newJob.title = "";
+            this.newJob.description = "";
+            this.newJob.budget = "";
+            this.errorMessage = "";
+            this.errorMessage2 = "";
+            this.isValidBudget = true;
           })
           .catch(error => {
+              console.error('Error creating job:', error);
               if (error.response) {
-                console.log(error.response.data);
-                console.log(error.response.status);
+                console.log('Error response:', error.response.data);
+                console.log('Error status:', error.response.status);
+                this.errorMessage = error.response.data.message || "Error creating job. Please try again.";
+              } else {
+                this.errorMessage = "Network error. Please try again.";
               }
             });
 
@@ -530,6 +577,21 @@ color: black
 .error-message{
   color:white;
   font-size: 16px;
+}
+
+.no-jobs-message {
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+  font-style: italic;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  margin: 20px;
+}
+
+.no-jobs-message p {
+  margin: 0;
+  font-size: 18px;
 }
 
 </style>
