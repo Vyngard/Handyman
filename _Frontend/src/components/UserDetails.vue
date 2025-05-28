@@ -4,9 +4,14 @@
         <div class="cards-description">
            
             <div class ="personal-data">
-                <img src="images/people.png" class="profile" />  
-                <p class="data-description">{{ this.fullName }}</p>
-                <p class="data-description">{{ user.email }}</p>
+                <img src="images/people.png" class="profile" />
+                <p class="data-description"><strong>Name:</strong> {{ this.fullName || user.username }}</p>
+                <p class="data-description"><strong>Email:</strong> {{ user.email }}</p>
+                <p class="data-description"><strong>User ID:</strong> {{ user.id }}</p>
+                <p class="data-description" v-if="user.credit !== undefined"><strong>Credit:</strong> ${{ user.credit }}</p>
+                <p class="data-description" v-if="user.phone"><strong>Phone:</strong> {{ user.phone }}</p>
+                <p class="data-description" v-if="user.location"><strong>Location:</strong> {{ user.location }}</p>
+                <p class="data-description" v-if="user.createdAt"><strong>Member Since:</strong> {{ formatDate(user.createdAt) }}</p>
             </div>
             <div class ="container-form">
                 <div class="ctn-title">
@@ -57,49 +62,54 @@
       
       <div v-if="completedJobs.length">
         <div v-for="(job, index) in completedJobs" :key="index" class="job">
-          <!-- <p class="desc-jobs1">Posted: {{ date }} </p> -->
-          <p class="desc-job" style="font-weight: bold;">{{ job.title }} </p>
-          <p class="desc-job">{{ message }}{{ job.description }} {{ message2 }} </p>
-          <p class="desc-job"><span style="font-weight: bold;">Worker's Name: </span>{{ job.worker.username }} </p>
-          <p class="desc-job"><strong>Budget: </strong>        
-            <span>{{ job.budget }}</span>
+          <p class="desc-job" style="font-weight: bold;">{{ job.title }}</p>
+          <p class="desc-job"><strong>Description:</strong> {{ job.description }}</p>
+          <p class="desc-job" v-if="job.worker"><strong>Worker:</strong> {{ job.worker.username }}</p>
+          <p class="desc-job" v-if="job.location"><strong>Location:</strong> {{ job.location }}</p>
+          <p class="desc-job" v-if="job.skills && job.skills.length > 0">
+            <strong>Skills:</strong> {{ job.skills.map(skill => skill.name).join(', ') }}
           </p>
-          <p class="desc-job"><strong>Job ID: </strong>{{ job.id }}  </p>
+          <p class="desc-job"><strong>Budget:</strong> ${{ job.budget }}</p>
+          <p class="desc-job"><strong>Job ID:</strong> {{ job.id }}</p>
+          <p class="desc-job" v-if="job.createdAt"><strong>Created:</strong> {{ formatDate(job.createdAt) }}</p>
+          <p class="desc-job" v-if="job.completedAt"><strong>Completed:</strong> {{ formatDate(job.completedAt) }}</p>
           <p class="desc-job">
+            <strong>Rating:</strong>
             <star-rating v-model:rating="job.rating"
-              star-size="35"	
-              show-rating=False
+              star-size="35"
+              show-rating=false
               animate=true
               @update:rating="setRating(job.id, $event)">
-            </star-rating>   
+            </star-rating>
           </p>
         </div>
       </div>
   
       <div v-if="uncompletedJobs.length">
         <div v-for="(job, index) in uncompletedJobs" :key="index" class="job">
-          <p class="desc-job" style="font-weight: bold;">{{ job.title }} </p>
-          <p class="desc-job">{{ job.description }} </p>
-          <p class="desc-job"><strong>Budget: </strong>        
-            <span>{{ job.budget }}</span>
+          <p class="desc-job" style="font-weight: bold;">{{ job.title }}</p>
+          <p class="desc-job"><strong>Description:</strong> {{ job.description }}</p>
+          <p class="desc-job" v-if="job.worker"><strong>Assigned Worker:</strong> {{ job.worker.username }}</p>
+          <p class="desc-job" v-else><strong>Status:</strong> <span style="color: orange;">Looking for worker</span></p>
+          <p class="desc-job" v-if="job.location"><strong>Location:</strong> {{ job.location }}</p>
+          <p class="desc-job" v-if="job.skills && job.skills.length > 0">
+            <strong>Skills Required:</strong> {{ job.skills.map(skill => skill.name).join(', ') }}
           </p>
-          <p class="desc-job"><strong>Job ID: </strong>{{ job.id }}  </p>
-          <!--<p class="desc-job"><strong>Rate: </strong>
-                       <span v-if="job.rating !== null">{{ job.rating }}</span>
-            <span v-else>{{ rating }}</span>
-          </p> -->
-           <p class="desc-job"><star-rating v-model:rating="job.rating"
-              star-size="35"	
-              show-rating=False
+          <p class="desc-job"><strong>Budget:</strong> ${{ job.budget }}</p>
+          <p class="desc-job"><strong>Job ID:</strong> {{ job.id }}</p>
+          <p class="desc-job" v-if="job.createdAt"><strong>Posted:</strong> {{ formatDate(job.createdAt) }}</p>
+          <p class="desc-job" v-if="job.rating !== null && job.rating !== undefined">
+            <strong>Current Rating:</strong>
+            <star-rating v-model:rating="job.rating"
+              star-size="35"
+              show-rating=false
               animate=true
               @update:rating="setRating(job.id, $event)">
-            </star-rating>  
-            </p>
-          
-
-          <p class="desc-job"> 
-            <button @click="markCompleted(job.id)" v-if="job.worker !=null" class="button-profile">Mark as Completed</button>    
-          </p>    
+            </star-rating>
+          </p>
+          <p class="desc-job">
+            <button @click="markCompleted(job.id)" v-if="job.worker != null" class="button-profile">Mark as Completed</button>
+          </p>
         </div>
       </div>
     </div>
@@ -259,7 +269,12 @@
           .catch(error => {
             console.error("Error updating job rating:", error);
           });
-          }
+          },
+
+        formatDate(dateString) {
+          if (!dateString) return 'N/A';
+          return new Date(dateString).toLocaleDateString();
+        }
         
       },
       mounted() {

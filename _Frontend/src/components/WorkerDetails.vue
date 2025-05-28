@@ -5,9 +5,19 @@
         <div class="cards-description">
            
             <div class ="personal-data">
-                <img src="images/people.png" class="profile" />  
-                <p class=" data-description">{{ worker.username }}</p>
-                <p class="data-description">{{ worker.description }}</p>
+                <img src="images/people.png" class="profile" />
+                <p class="data-description"><strong>Name:</strong> {{ worker.username }}</p>
+                <p class="data-description"><strong>ID:</strong> {{ worker.id }}</p>
+                <p class="data-description">{{ worker.description || 'No description available' }}</p>
+                <div v-if="worker.skills && worker.skills.length > 0" class="skills-section">
+                    <p><strong>Skills:</strong></p>
+                    <div class="skills-list">
+                        <span v-for="skill in worker.skills" :key="skill.id" class="skill-tag">{{ skill.name }}</span>
+                    </div>
+                </div>
+                <p v-if="worker.averageRating !== undefined"><strong>Rating:</strong> {{ worker.averageRating }}/5</p>
+                <p v-if="worker.hourlyRate"><strong>Hourly Rate:</strong> ${{ worker.hourlyRate }}</p>
+                <p v-if="worker.experienceYears"><strong>Experience:</strong> {{ worker.experienceYears }} years</p>
             </div>
 
 
@@ -52,33 +62,39 @@
             <div v-if="jobs.length" >
                     <div v-for="(job, index) in jobs" :key="index" class="job">
                         <div v-if="jobs.length && displayNewJobs">
-                                
-                                    <p class="desc-jobs1">Posted: {{ date }} </p>
-                                    <p class="desc-job"> {{ message }}{{ job.description }} {{ message2 }}</p>
-                                    <p class="desc-job"><strong>Client:</strong> {{ job.client.username }}</p>
-                                    <p class="desc-job"><strong>Budged:</strong> ${{ job.budget }}</p>
-                                    <p class="desc-job"><strong>Job Id:</strong> {{ job.id }}</p>
-                                    <div class="container-apply-btn">
-                                    <button class="apply-btn" @click="applyJob(job.id)">Apply Now</button>
-                               
+                            <p class="desc-jobs1">Posted: {{ formatDate(job.createdAt) || date }}</p>
+                            <p class="desc-job"><strong>Title:</strong> {{ job.title }}</p>
+                            <p class="desc-job"><strong>Description:</strong> {{ job.description }}</p>
+                            <p class="desc-job" v-if="job.client"><strong>Client:</strong> {{ job.client.username }}</p>
+                            <p class="desc-job"><strong>Budget:</strong> ${{ job.budget }}</p>
+                            <p class="desc-job" v-if="job.location"><strong>Location:</strong> {{ job.location }}</p>
+                            <p class="desc-job" v-if="job.skills && job.skills.length > 0">
+                                <strong>Skills Required:</strong> {{ job.skills.map(skill => skill.name).join(', ') }}
+                            </p>
+                            <p class="desc-job"><strong>Job ID:</strong> {{ job.id }}</p>
+                            <div class="container-apply-btn">
+                                <button class="apply-btn" @click="applyJob(job.id)">Apply Now</button>
                             </div>
                         </div>
                         <div v-else-if="jobs.length && displayOldJobs">
-                            <p class="desc-job"> {{ message }}{{ job.description }} {{ message2 }} </p>
-                            <p class="desc-job"><strong>Rate: </strong>                            
-                                <span v-if="job.rating !== null">{{ job.rating }}</span>                                
+                            <p class="desc-job"><strong>Title:</strong> {{ job.title }}</p>
+                            <p class="desc-job"><strong>Description:</strong> {{ job.description }}</p>
+                            <p class="desc-job" v-if="job.client"><strong>Client:</strong> {{ job.client.username }}</p>
+                            <p class="desc-job"><strong>Budget:</strong> ${{ job.budget }}</p>
+                            <p class="desc-job" v-if="job.location"><strong>Location:</strong> {{ job.location }}</p>
+                            <p class="desc-job"><strong>Job ID:</strong> {{ job.id }}</p>
+                            <p class="desc-job"><strong>Status:</strong>
+                                <span :class="job.isCompleted ? 'completed' : 'in-progress'">
+                                    {{ job.isCompleted ? 'Completed' : 'In progress' }}
+                                </span>
+                            </p>
+                            <p class="desc-job" v-if="job.createdAt"><strong>Created:</strong> {{ formatDate(job.createdAt) }}</p>
+                            <p class="desc-job" v-if="job.completedAt"><strong>Completed:</strong> {{ formatDate(job.completedAt) }}</p>
+                            <p class="desc-job"><strong>Rating:</strong>
+                                <span v-if="job.rating !== null && job.rating !== undefined">{{ job.rating }}/5</span>
                                 <span v-else>{{ rating }}</span>
                             </p>
-                            <p class="desc-job"><strong>Client:</strong> {{ job.client.username }}</p>
-                            <p class="desc-job"><strong>Job Id:</strong> {{ job.id }}</p>
-                            <p class="desc-job"><strong>Status: </strong>
-                                <span>{{ job.isCompleted ? 'Completed' : 'In progress' }}</span>
-                            </p>
-                           
                         </div>
-                           
-                        
-                        
                     </div>
                
             </div>
@@ -105,7 +121,7 @@ export default{
             jobs:[],
             date: "",
             random_number: 0, 
-            displayNewjobs: true,
+            displayNewJobs: true,
             displayOldJobs: false,
             showForm: false ,
             worker_settings:{
@@ -251,9 +267,14 @@ export default{
         })
         .catch(error => {
                     console.error(error);
-        })
-      },    
-    },
+       })
+     },
+
+     formatDate(dateString) {
+         if (!dateString) return 'N/A';
+         return new Date(dateString).toLocaleDateString();
+     }
+   },
     mounted(){
       this.retrieveWorker()          
       let newLogin = localStorage.getItem('newLogin'); 
@@ -497,6 +518,37 @@ margin-top:2px;
 margin-bottom: 2px;
 color: black
 
+}
+
+.skills-section {
+    margin: 10px 0;
+    text-align: left;
+}
+
+.skills-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 5px;
+}
+
+.skill-tag {
+    background-color: #e27713;
+    color: white;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.completed {
+    color: green;
+    font-weight: bold;
+}
+
+.in-progress {
+    color: orange;
+    font-weight: bold;
 }
 
 </style>

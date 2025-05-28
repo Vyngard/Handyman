@@ -20,24 +20,30 @@
 
     <div class="cards">
       <div v-for="job in uncompletedJobs" :key="job.id" class="card-worker">
-        <div v-if="job.isCompleted === false" class="completedJob" style="font-weight: normal;">            
+        <div v-if="job.isCompleted === false" class="completedJob" style="font-weight: normal;">
           <p><span class="bold">Job Category: </span>{{ job.title }}</p>
-          <p><span class="bold">Job Description: </span>{{ message }}{{ job.description }} {{ message2 }} </p>
-          <p><span class="bold">Client Nme: </span>{{ getClientId(job.client.username) }}</p>
+          <p><span class="bold">Job Description: </span>{{ job.description }}</p>
+          <p><span class="bold">Client Name: </span>{{ job.client ? job.client.username : 'N/A' }}</p>
+          <p><span class="bold">Location: </span>{{ job.location || 'Not specified' }}</p>
+          <p><span class="bold">Skills Required: </span>{{ job.skills && job.skills.length > 0 ? job.skills.map(skill => skill.name).join(', ') : 'Not specified' }}</p>
           <div class="rating-container">
-              <img src="images/budget.png" class="rating" /><span class="bold">Budget: </span> {{ job.budget }}
+              <img src="images/budget.png" class="rating" /><span class="bold">Budget: $</span>{{ job.budget }}
           </div>
           <p><span class="bold">Job Id: </span>{{ job.id }}</p>
-          <div v-if="job.client.id == this.clientId">
+          <p><span class="bold">Created: </span>{{ formatDate(job.createdAt) }}</p>
+          <div v-if="job.worker">
+            <p><span class="bold">Assigned Worker: </span>{{ job.worker.username }}</p>
+          </div>
+          <div v-if="job.client && job.client.id == this.clientId">
             <star-rating v-model:rating="job.rating"
-              star-size="35"	
-              show-rating=False
+              star-size="35"
+              show-rating=false
               animate=true
               @update:rating="setRating(job.id, $event)">
-            </star-rating>    
-            <button @click="markAsCompleted(job.id)" v-if="job.client.id  == clientId" class="button-profile">Mark as Completed</button>    
-        </div>  
-      
+            </star-rating>
+            <button @click="markAsCompleted(job.id)" v-if="job.client.id == clientId" class="button-profile">Mark as Completed</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -49,37 +55,42 @@
 
   <div class="cards-completed"> 
     <div v-for="job in completedJobs" :key="job.id" class="card-worker" style="font-weight: normal;">
-
       <div class="unCompletedJob">
         <img src="images/job.png"  class="profile" />
-        <p>{{ job.id }}</p>
+        <p><span class="bold">Job ID: </span>{{ job.id }}</p>
         <p><span class="bold">Job Category: </span>{{ job.title }}</p>
-        <p><span class="bold">Client: </span>{{ getClientId(job.client.username) }}</p>
-        <p><span class="bold">Worker:</span>{{ getWorkerId(job.worker.username) }}</p>
+        <p><span class="bold">Description: </span>{{ job.description }}</p>
+        <p><span class="bold">Client: </span>{{ job.client ? job.client.username : 'N/A' }}</p>
+        <p><span class="bold">Worker: </span>{{ job.worker ? job.worker.username : 'N/A' }}</p>
+        <p><span class="bold">Location: </span>{{ job.location || 'Not specified' }}</p>
+        <p><span class="bold">Skills: </span>{{ job.skills && job.skills.length > 0 ? job.skills.map(skill => skill.name).join(', ') : 'Not specified' }}</p>
+        <p><span class="bold">Completed: </span>{{ formatDate(job.completedAt) }}</p>
         <div class="middle-div">
           <div class="rating-container">
-              <img src="images/budget.png" class="rating" /><span class="bold">Budget: </span> {{ job.budget }}
+              <img src="images/budget.png" class="rating" /><span class="bold">Budget: $</span>{{ job.budget }}
           </div>
-          <div v-if="job.rating === null">
-              <p>Ranking not defined yet</p>
+          <div v-if="job.rating === null || job.rating === undefined">
+              <p>Rating not defined yet</p>
           </div>
-          <div v-if="job.rating === 5"> 
+          <div v-else-if="job.rating === 5">
               <img src="images/5star.png" class="rating" />
           </div>
-          <div v-if="job.rating === 4"> 
+          <div v-else-if="job.rating === 4">
               <img src="images/4star.png" class="rating" />
           </div>
-          <div v-if="job.rating === 3"> 
+          <div v-else-if="job.rating === 3">
               <img src="images/3star.png" class="rating" />
           </div>
-          <div v-if="job.rating === 2"> 
+          <div v-else-if="job.rating === 2">
               <img src="images/2star.png" class="rating" />
           </div>
-          <div v-if="job.rating === 1"> 
+          <div v-else-if="job.rating === 1">
               <img src="images/1star.png" class="rating" />
           </div>
-        </div>    
-      </div>
+          <div v-else>
+              <p>Rating: {{ job.rating }}/5</p>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -160,6 +171,11 @@
         .catch(error => {
           console.error("Error updating job rating:", error);
         });
+        },
+
+        formatDate(dateString) {
+          if (!dateString) return 'N/A';
+          return new Date(dateString).toLocaleDateString();
         }
     },
     mounted() {

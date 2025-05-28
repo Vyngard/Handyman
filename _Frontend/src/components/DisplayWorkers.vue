@@ -14,34 +14,71 @@
     <div class="cards">
       <div v-for="worker in workers" :key="worker.id" class="card-worker">
         <img src="images/people.png"  class="profile" />
-        <p><strong>id:</strong> {{ worker.id }}</p>
-
-        <p style="font-size: large;">{{ worker.username }}</p>
-        <p style="font-weight: normal;">{{ worker.description }}</p>
-        <p style="text-align: left; margin-left: 10px;">
-          <img src="../../public/images/phone.png" width="25px" height="25px" style="margin-bottom: -7px;"/> {{ worker.phone }}<br/><br/>
-          <img src="../../public/images/email.png" width="30px" height="30px" style="margin-bottom: -10px; padding-right: 2px; margin-left: -2px;"/>{{ worker.email }}
-      </p>
+        <p><strong>ID:</strong> {{ worker.id }}</p>
+        <p style="font-size: large; font-weight: bold;">{{ worker.username }}</p>
+        <p style="font-weight: normal;">{{ worker.description || 'No description available' }}</p>
         
-        <!-- <div class="rating-container">
-          <img src="images/star.png" class="rating" /><span>{{ worker.averageRating }}</span>
-        </div> -->
-        <div v-if="worker.averageRating === 5"> 
-          <img src="images/5star.png" class="rating" />
+        <!-- Skills Display -->
+        <div v-if="worker.skills && worker.skills.length > 0" class="skills-container">
+          <p><strong>Skills:</strong></p>
+          <div class="skills-list">
+            <span v-for="skill in worker.skills" :key="skill.id" class="skill-tag">{{ skill.name }}</span>
+          </div>
         </div>
-        <div v-if="worker.averageRating === 4"> 
-            <img src="images/4star.png" class="rating" />
+        
+        <!-- Location -->
+        <p v-if="worker.location"><strong>Location:</strong> {{ worker.location }}</p>
+        
+        <!-- Contact Info -->
+        <div class="contact-info">
+          <p v-if="worker.phone">
+            <img src="../../public/images/phone.png" width="25px" height="25px" style="margin-bottom: -7px;"/> {{ worker.phone }}
+          </p>
+          <p v-if="worker.email">
+            <img src="../../public/images/email.png" width="30px" height="30px" style="margin-bottom: -10px; padding-right: 2px; margin-left: -2px;"/>{{ worker.email }}
+          </p>
         </div>
-        <div v-if="worker.averageRating === 3"> 
-            <img src="images/3star.png" class="rating" />
+        
+        <!-- Hourly Rate -->
+        <p v-if="worker.hourlyRate"><strong>Hourly Rate:</strong> ${{ worker.hourlyRate }}</p>
+        
+        <!-- Experience -->
+        <p v-if="worker.experienceYears"><strong>Experience:</strong> {{ worker.experienceYears }} years</p>
+        
+        <!-- Rating Display -->
+        <div class="rating-section">
+          <div v-if="worker.averageRating === null || worker.averageRating === undefined">
+            <p>No rating yet</p>
+          </div>
+          <div v-else-if="worker.averageRating === 5">
+            <img src="images/5star.png" class="rating" />
+          </div>
+          <div v-else-if="worker.averageRating === 4">
+              <img src="images/4star.png" class="rating" />
+          </div>
+          <div v-else-if="worker.averageRating === 3">
+              <img src="images/3star.png" class="rating" />
+          </div>
+          <div v-else-if="worker.averageRating === 2">
+              <img src="images/2star.png" class="rating" />
+          </div>
+          <div v-else-if="worker.averageRating === 1">
+              <img src="images/1star.png" class="rating" />
+          </div>
+          <div v-else>
+              <p>Rating: {{ worker.averageRating }}/5</p>
+          </div>
         </div>
-        <div v-if="worker.averageRating === 2"> 
-            <img src="images/2star.png" class="rating" />
-        </div>
-        <div v-if="worker.averageRating=== 1"> 
-            <img src="images/1star.png" class="rating" />
-        </div>
-        <button type="submit" class="button-profile" @click="sendData(worker.id)">See more</button>        
+        
+        <!-- Availability -->
+        <p v-if="worker.isAvailable !== undefined">
+          <strong>Status:</strong>
+          <span :class="worker.isAvailable ? 'available' : 'unavailable'">
+            {{ worker.isAvailable ? 'Available' : 'Busy' }}
+          </span>
+        </p>
+        
+        <button type="submit" class="button-profile" @click="sendData(worker.id)">See more</button>
       </div>
     </div>
   </div>
@@ -182,5 +219,48 @@ h1{
   margin-bottom: 10px;
 }
 
+.skills-container {
+  margin: 10px 0;
+  text-align: left;
+}
+
+.skills-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 5px;
+}
+
+.skill-tag {
+  background-color: #e27713;
+  color: white;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.contact-info {
+  text-align: left;
+  margin: 10px 0;
+}
+
+.contact-info p {
+  margin: 5px 0;
+}
+
+.rating-section {
+  margin: 10px 0;
+}
+
+.available {
+  color: green;
+  font-weight: bold;
+}
+
+.unavailable {
+  color: red;
+  font-weight: bold;
+}
 
 </style>

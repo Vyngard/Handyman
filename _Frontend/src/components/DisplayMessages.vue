@@ -32,21 +32,17 @@
         <div class="message-header">
           <img src="../../public/images/people.png" class="avatar" alt="Avatar">
           <div class="sender-info">
-            <p v-if='userType == "user"' class="sender-name">{{ message.worker.username }} 
-               <span class="timestamp">{{ formatDate(message.timestamp) }}</span>
-            </p>
-            <p v-if='userType == "worker"' class="sender-name">{{ message.user.username }} 
-               <span class="timestamp">{{ formatDate(message.timestamp) }}</span>
-            </p>
             <p class="sender-name">
-              {{ userType === 'user' ? message.worker.username : message.user.username }}
-               <span class="timestamp">{{ formatDate(message.timestamp) }}</span>
+              <span v-if='userType == "user" && message.worker'>{{ message.worker.username }}</span>
+              <span v-else-if='userType == "worker" && message.user'>{{ message.user.username }}</span>
+              <span v-else>Unknown User</span>
+              <span class="timestamp">{{ formatDate(message.timestamp) }}</span>
             </p>
-
+            <p class="message-id">Message ID: {{ message.id }}</p>
           </div>
         </div>
         <div class="message-content">
-          <p>{{ message.content }} {{ message.content }}{{ message.content }}</p>
+          <p>{{ message.content }}</p>
         </div>
       </div>
     </div>
@@ -63,35 +59,43 @@ export default {
     data() {
         return {
             messages: [],
+            userType: null,
+            fullName: null,
+            recipientId: '',
+            messageContent: ''
         };
     },
 
     methods: {
       fetchMessages() {
-        let userType = localStorage.getItem('userType');
-        let id;
-        let sender;
-        let fullName;
+        this.userType = localStorage.getItem('userType');
         this.fullName = localStorage.getItem('fullName');
-        console.log(fullName);
-        console.log(sender);
-        if (userType == "user") {
+        let id;
+        
+        console.log('User type:', this.userType);
+        console.log('Full name:', this.fullName);
+        
+        if (this.userType == "user") {
             id = localStorage.getItem('userId');
             FetchDataService.getAllUserMessages(id)
                 .then(response => {
-                    this.messages = response.data.reverse(); // Reverse the messages array
+                    this.messages = response.data ? response.data.reverse() : []; // Reverse the messages array
+                    console.log('User messages:', this.messages);
                 })
                 .catch(error => {
-                    console.error("Error fetching messages:", error);
+                    console.error("Error fetching user messages:", error);
+                    this.messages = [];
                 });
-        } else if (userType == "worker") {
+        } else if (this.userType == "worker") {
             id = localStorage.getItem('workerId');
             FetchDataService.getAllWorkerMessages(id)
                 .then(response => {
-                    this.messages = response.data.reverse(); // Reverse the messages array
+                    this.messages = response.data ? response.data.reverse() : []; // Reverse the messages array
+                    console.log('Worker messages:', this.messages);
                 })
                 .catch(error => {
-                    console.error("Error fetching messages:", error);
+                    console.error("Error fetching worker messages:", error);
+                    this.messages = [];
                 });
         }
       },
@@ -120,6 +124,10 @@ export default {
           FetchDataService.sendMessage(messageData)
               .then(response => {
                   console.log("Message sent:", response.data);
+                  // Clear the form
+                  this.recipientId = '';
+                  this.messageContent = '';
+                  // Refresh messages
                   this.fetchMessages();
               })
               .catch(error => {
@@ -191,6 +199,12 @@ export default {
 
 .message-content {
   line-height: 1.6;
+}
+
+.message-id {
+  font-size: 12px;
+  color: #666;
+  margin: 0;
 }
 .container-cards{
     width: 95%;
